@@ -14,7 +14,7 @@ test:
 
 
 pep8:
-	pep8 test tiddlywebplugins
+	pep8 --max-line-length=120 test tiddlywebplugins
 
 install:
 	python setup.py install
