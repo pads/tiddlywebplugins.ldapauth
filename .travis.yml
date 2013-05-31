@@ -1,0 +1,7 @@
+language: python
+python:
+  - "2.7"
+before_install: "apt-get install libldap2-dev libsasl2-dev"
+install: "make install"
+before_script: "pip install -U pytest mock httplib2 wsgi_intercept"
+script: "make pep8 test"
