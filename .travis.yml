@@ -3,5 +3,5 @@ python:
   - "2.7"
 before_install: "sudo apt-get install libldap2-dev libsasl2-dev"
 install: "make install"
-before_script: "pip install -U pytest mock httplib2 wsgi_intercept"
+before_script: "pip install -U pytest mock pep8 httplib2 wsgi_intercept"
 script: "make pep8 test"
