@@ -22,8 +22,6 @@ from mock import Mock
 
 from test.fixtures import initialize_app
 
-from tiddlywebconfig import config
-
 
 def setup_module():
     initialize_app()
@@ -78,6 +76,7 @@ def test_post_valid_user_credentials_responds_with_303():
 
 
 def test_post_invalid_user_credentials_responds_with_401():
+    initialize_app()
     mock_ldap = ldap
     mock_initialize = ldap.initialize
     mock_ldap.initialize = Mock(name='ldap_init', return_value=mock_initialize)
@@ -98,6 +97,7 @@ def test_post_invalid_user_credentials_responds_with_401():
 
 
 def test_post_can_use_custom_ldap_config():
+    from tiddlyweb.config import config
     config['ldap_host'] = '1.2.3.4'
     config['ldap_port'] = '56789'
 
