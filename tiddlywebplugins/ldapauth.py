@@ -33,7 +33,9 @@ Password <input type="password" name="password" size="40">
         """
         Respond to a POST by processing data sent from a form.
         """
-        ldap_instance = ldap.initialize('ldap://127.0.0.1:389')
+        ldap_host = environ['tiddlyweb.config'].get('ldap_host', '127.0.0.1')
+        ldap_port = environ['tiddlyweb.config'].get('ldap_port', '389')
+        ldap_instance = ldap.initialize('ldap://%s:%s' % (ldap_host, ldap_port))
 
         query = environ['tiddlyweb.query']
         user = query['user'][0]
