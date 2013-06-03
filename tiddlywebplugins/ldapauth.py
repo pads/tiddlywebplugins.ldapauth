@@ -18,7 +18,8 @@ class Challenger(ChallengerInterface):
         """
         Respond to a GET request by sending a form.
         """
-        return self._send_login_form(start_response)
+        redirect = (environ['tiddlyweb.query'].get('tiddlyweb_redirect', ['/'])[0])
+        return self._send_login_form(start_response, redirect=redirect)
 
     def challenge_post(self, environ, start_response):
         """
@@ -31,6 +32,7 @@ class Challenger(ChallengerInterface):
         query = environ['tiddlyweb.query']
         user = query['user'][0]
         password = query['password'][0]
+        redirect = query.get('tiddlyweb_redirect', ['/'])[0]
 
         try:
             ldap_instance.simple_bind_s(user, password)
@@ -45,23 +47,29 @@ class Challenger(ChallengerInterface):
             return [status]
         except ldap.INVALID_CREDENTIALS:
             LOGGER.warn("user %s failed authentication" % user)
-            return self._send_login_form(start_response, error_message='Invalid user credentials, please try again')
+            return self._send_login_form(start_response, error_message='Invalid user credentials, please try again',
+                                         redirect=redirect)
         except ldap.SERVER_DOWN:
             LOGGER.error("could not establish connection with LDAP server")
             return self._send_login_form(start_response, '504 Gateway Timeout',
                                          error_message=
-                                         'Unable to reach authorization provider, please contact your administrator')
+                                         'Unable to reach authorization provider, please contact your administrator',
+                                         redirect=redirect)
 
-    def _send_login_form(self, start_response, status='401 Unauthorized', error_message=''):
+    def _send_login_form(self, start_response, status='401 Unauthorized', error_message='', redirect='/'):
         start_response(status, [('Content-Type', 'text/html; charset=UTF-8')])
         return ["""
-        <p>%s</p>
-        <form action="" method="POST">
-User: <input name="user" size="40">
-Password <input type="password" name="password" size="40">
-<input type="hidden" name="tiddlyweb_redirect" value="/">
-
-<input type="hidden" id="csrf_token" name="csrf_token">
-<input type="submit" value="submit">
+<p>%s</p>
+<form action="" method="POST">
+    <label>
+        User:
+        <input name="user" />
+    </label>
+    <label>
+        Password:
+        <input type="password" name="password" />
+    </label>
+    <input type="hidden" name="tiddlyweb_redirect" value="%s" />
+    <input type="submit" value="submit" />
 </form>
-        """ % error_message]
+        """ % (error_message, redirect)]
