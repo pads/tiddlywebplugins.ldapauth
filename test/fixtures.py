@@ -10,7 +10,7 @@ config['server_host'] = {
     'port': '8001',
 }
 
-config['auth_systems'] = ['tiddlywebplugins.ldapauth']
+config['secret'] = ['ssh!']
 
 
 def initialize_app():
