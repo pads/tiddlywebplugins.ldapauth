@@ -13,7 +13,7 @@ test:
 	py.test -x test
 
 test_with_coverage:
-	py.test test --cov=tiddlywebplugins --cov-report term-missing
+	py.test test --cov tiddlywebplugins --cov-report term-missing
 
 pep8:
 	pep8 --max-line-length=120 test tiddlywebplugins
