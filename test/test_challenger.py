@@ -4,7 +4,6 @@ The LDAP interface is mocked as setting up a real one in a test
 environment is too much effort.
 
 Still to  test and implement:
-* Act on a redirect value
 * Accept a friendly user ID and map it to a DN.
 """
 
@@ -71,6 +70,24 @@ def test_post_valid_user_credentials_sets_cookie():
 
     assert raised
     assert 'tiddlyweb_user="pads:0af5c9b' in e.response['set-cookie']
+
+
+def test_post_valid_user_credentials_applies_redirect():
+    _mock_good_ldap_bind()
+
+    try:
+        _send_good_login(redirect='/bags')
+
+    except httplib2.RedirectLimit, e:
+        raised = 1
+
+    assert raised
+    assert e.response['status'] == '303'
+    headers = {'cookie': e.response['set-cookie']}
+    http = httplib2.Http()
+    response, content = http.request(e.response['location'], method='GET', headers=headers)
+    assert response['status'] == '200'
+    assert '<title>TiddlyWeb - Bags</title>' in content
 
 
 def test_post_invalid_user_credentials_responds_with_401():

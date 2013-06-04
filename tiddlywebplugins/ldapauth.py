@@ -2,7 +2,7 @@ import logging
 import ldap
 
 from tiddlyweb.web.challengers import ChallengerInterface
-from tiddlyweb.web.util import make_cookie
+from tiddlyweb.web.util import make_cookie, server_host_url
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,12 +40,16 @@ class Challenger(ChallengerInterface):
             LOGGER.info("user %s successfully authenticated" % user)
             status = '303 See Other'
 
+            uri = '%s%s' % (server_host_url(environ), redirect)
+
             secret = environ['tiddlyweb.config']['secret']
             cookie_age = environ['tiddlyweb.config'].get('cookie_age', None)
             cookie = make_cookie('tiddlyweb_user', user, mac_key=secret, path=self._cookie_path(environ),
                                  expires=cookie_age)
-            start_response(status, [('Content-Type', 'text/plain'), ('Set-Cookie', cookie)])
-            return [status]
+
+            start_response(status, [('Content-Type', 'text/plain'), ('Set-Cookie', cookie),
+                                    ('Location', uri.encode('utf-8'))])
+            return [uri]
         except ldap.INVALID_CREDENTIALS:
             LOGGER.warn("user %s failed authentication" % user)
             return self._send_login_form(start_response, error_message='Invalid user credentials, please try again',
