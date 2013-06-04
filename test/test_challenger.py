@@ -2,9 +2,6 @@
 Test the challenger by sending requests to it via a TiddlyWeb instance.
 The LDAP interface is mocked as setting up a real one in a test
 environment is too much effort.
-
-Still to  test and implement:
-* Accept a friendly user ID and map it to a DN.
 """
 
 import httplib2
@@ -53,7 +50,7 @@ def test_post_valid_user_credentials_responds_with_303():
         raised = 1
 
     mock_ldap.initialize.assert_called_once_with('ldap://127.0.0.1:389')
-    mock_initialize.simple_bind_s.assert_called_once_with('pads', 'letmein')
+    mock_initialize.simple_bind_s.assert_called_once_with('cn=pads,dc=localhost', 'letmein')
 
     assert raised
     assert e.response['status'] == '303'
@@ -82,7 +79,7 @@ def test_post_valid_user_credentials_applies_redirect():
         raised = 1
 
     assert raised
-    assert e.response['status'] == '303'
+
     headers = {'cookie': e.response['set-cookie']}
     http = httplib2.Http()
     response, content = http.request(e.response['location'], method='GET', headers=headers)
@@ -96,7 +93,7 @@ def test_post_invalid_user_credentials_responds_with_401():
     response, content = _send_bad_login()
 
     mock_ldap.initialize.assert_called_once_with('ldap://127.0.0.1:389')
-    mock_initialize.simple_bind_s.assert_called_once_with('imposter', 'letmein')
+    mock_initialize.simple_bind_s.assert_called_once_with('cn=imposter,dc=localhost', 'letmein')
 
     assert response['status'] == '401'
 
@@ -107,7 +104,7 @@ def test_post_invalid_user_credentials_responds_with_login_form():
     response, content = _send_bad_login()
 
     mock_ldap.initialize.assert_called_once_with('ldap://127.0.0.1:389')
-    mock_initialize.simple_bind_s.assert_called_once_with('imposter', 'letmein')
+    mock_initialize.simple_bind_s.assert_called_once_with('cn=imposter,dc=localhost', 'letmein')
 
     _assert_form(content, 'Invalid user credentials, please try again')
 
@@ -118,7 +115,7 @@ def test_post_invalid_user_credentials_preserves_redirect_in_form():
     response, content = _send_bad_login(redirect='/bar')
 
     mock_ldap.initialize.assert_called_once_with('ldap://127.0.0.1:389')
-    mock_initialize.simple_bind_s.assert_called_once_with('imposter', 'letmein')
+    mock_initialize.simple_bind_s.assert_called_once_with('cn=imposter,dc=localhost', 'letmein')
 
     _assert_form(content, 'Invalid user credentials, please try again', redirect='/bar')
 
@@ -143,7 +140,7 @@ def test_no_ldap_connection_responds_with_504():
     response, content = _send_good_login()
 
     mock_ldap.initialize.assert_called_once()
-    mock_initialize.simple_bind_s.assert_called_once_with('pads', 'letmein')
+    mock_initialize.simple_bind_s.assert_called_once_with('cn=pads,dc=localhost', 'letmein')
 
     assert response['status'] == '504'
 
@@ -154,7 +151,7 @@ def test_no_ldap_connection_responds_with_login_form():
     response, content = _send_good_login()
 
     mock_ldap.initialize.assert_called_once()
-    mock_initialize.simple_bind_s.assert_called_once_with('pads', 'letmein')
+    mock_initialize.simple_bind_s.assert_called_once_with('cn=pads,dc=localhost', 'letmein')
 
     _assert_form(content, 'Unable to reach authorization provider, please contact your administrator')
 
@@ -165,9 +162,29 @@ def test_no_ldap_connection_preserves_redirect_in_form():
     response, content = _send_good_login(redirect='/baz')
 
     mock_ldap.initialize.assert_called_once()
-    mock_initialize.simple_bind_s.assert_called_once_with('pads', 'letmein')
+    mock_initialize.simple_bind_s.assert_called_once_with('cn=pads,dc=localhost', 'letmein')
 
     _assert_form(content, 'Unable to reach authorization provider, please contact your administrator', redirect='/baz')
+
+
+def test_configured_base_dn_is_used_as_part_of_login():
+    from tiddlyweb.config import config
+    config['ldapauth'] = {
+        'ldap_base_dn': 'dc=tiddlyweb,dc=org'
+    }
+
+    mock_ldap, mock_initialize = _mock_good_ldap_bind()
+
+    try:
+        _send_good_login()
+
+    except httplib2.RedirectLimit, e:
+        raised = 1
+
+    mock_ldap.initialize.assert_called_once_with('ldap://127.0.0.1:389')
+    mock_initialize.simple_bind_s.assert_called_once_with('cn=pads,dc=tiddlyweb,dc=org', 'letmein')
+
+    assert raised
 
 
 def _assert_form(content, error_message='', redirect='/'):

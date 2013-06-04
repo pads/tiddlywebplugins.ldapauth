@@ -28,6 +28,7 @@ class Challenger(ChallengerInterface):
         ldap_config = environ['tiddlyweb.config'].get('ldapauth', {})
         ldap_host = ldap_config.get('ldap_host', '127.0.0.1')
         ldap_port = ldap_config.get('ldap_port', '389')
+        ldap_base_dn = ldap_config.get('ldap_base_dn', 'dc=localhost')
         ldap_instance = ldap.initialize('ldap://%s:%s' % (ldap_host, ldap_port))
 
         query = environ['tiddlyweb.query']
@@ -36,7 +37,7 @@ class Challenger(ChallengerInterface):
         redirect = query.get('tiddlyweb_redirect', ['/'])[0]
 
         try:
-            ldap_instance.simple_bind_s(user, password)
+            ldap_instance.simple_bind_s('cn=%s,%s' % (user, ldap_base_dn), password)
             LOGGER.info("user %s successfully authenticated" % user)
             status = '303 See Other'
 
