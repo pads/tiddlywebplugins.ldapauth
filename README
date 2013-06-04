@@ -6,19 +6,22 @@ About
 
 Allows TiddlyWeb users to Authenticate against an LDAP server.
 
-This is work in progress, it's not in a working state yet.
+It has been tested with OpenLDAP but other LDAP-compliant servers could be used (e.g. Active Directory).
 
 Requirements
 ============
 
-* [Python](http://www.python.org/)
-* make
-* A working TiddlyWeb instance to test against
+* [Python](http://www.python.org/).
+* [pip](http://www.pip-installer.org/en/latest/).
+* make.
+* A working TiddlyWeb instance to test against.
 * [py.test](http://pytest.org/latest/) to run the tests.
-* An LDAP server (e.g. [OpenLDAP](openldap.org)) with some users added (more on this to come).
+* An LDAP server (e.g. [OpenLDAP](openldap.org)) with some users that have passwords.
 
 Modifying
 =========
+
+The best way to figure out how to work with this project is to look at the `.travis.yml` file.
 
 `setup.py` is used to package up the plugin, install and distribute.
 
@@ -26,21 +29,38 @@ Plugin code lives in the `tiddlywebplugins` directory.
 
 Tests live in the `test` directory.
 
-`make test` runs the tests.  Currently there is just the one that
-ensures the plugin can be imported.
-
-`make install` installs the plugin as a package on your system
+* `make test` runs the tests.
+* `make test_with_coverage` runs the tests with code coverage reporting from `pytest-cov`
+* `make pep8` runs pep8 over the code to check for style compliance.
+* `make install` installs the plugin as a package on your system
 (you may need sudo for this.)
+* `make release` packages and uploads the plugin to [PyPI](http://pypi.python.org/pypi) for distribution.
 
-`make release` packages and uploads the plugin to [PyPI](http://pypi.python.org/pypi) for distribution.
+Setting up LDAP
+===============
+
+See [this guide](http://pads.tiddlyspace.com/OpenLDAP%20Setup).
+
+TiddlyWeb Configuration
+=======================
+
+Reference the plugin from your TiddlyWeb configuration as an auth system plugin e.g:
+
+`'auth_systems': ['tiddlywebplugins.ldapauth']`
+
+Configure an LDAP server to communicate with.  If this is not specified then `127.0.0.1:389` is the default connection.
+
+    'ldapauth': {
+        'ldap_host': 'my.ldapserver.com',
+        'ldap_port': '3890',
+        'ldap_base_dn': 'dc=my,dc=domain'
+    }
+
+If `ldap_base_dn` is not specified then `dc=localhost` is assumed.
 
 Usage
 =====
 
-Reference tje plugin from your TiddlyWeb configuration as an auth system plugin e.g:
-
-`'auth_systems': ['tiddlywebplugins.ldapauth']`
-
-The URL to authenticate with will be:
+The URL to authenticate with will end in:
 
 `challenge/tiddlywebplugins.ldapauth`
