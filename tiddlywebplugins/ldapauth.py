@@ -16,7 +16,7 @@ class Challenger(ChallengerInterface):
 
     def challenge_get(self, environ, start_response):
         """
-        Respond to a GET request by sending a form.
+        Respond to a GET request by sending a form for the user to supply a username and password.
         """
         redirect = (environ['tiddlyweb.query'].get('tiddlyweb_redirect', ['/'])[0])
         return self._send_login_form(start_response, redirect=redirect)
@@ -24,6 +24,9 @@ class Challenger(ChallengerInterface):
     def challenge_post(self, environ, start_response):
         """
         Respond to a POST by processing data sent from a form.
+        Attempts to bind to the LDAP interface with the user credentials extracted from the form.
+        If this succeeds then the user is redirected to the target URI (default '/').
+        If the authentication fails then the form is re-sent with the appropriate error message.
         """
         ldap_config = environ['tiddlyweb.config'].get('ldapauth', {})
         ldap_host = ldap_config.get('ldap_host', '127.0.0.1')
@@ -31,23 +34,23 @@ class Challenger(ChallengerInterface):
         ldap_base_dn = ldap_config.get('ldap_base_dn', 'dc=localhost')
         ldap_instance = ldap.initialize('ldap://%s:%s' % (ldap_host, ldap_port))
 
+        # Get the required data from the posted form
         query = environ['tiddlyweb.query']
         user = query['user'][0]
         password = query['password'][0]
         redirect = query.get('tiddlyweb_redirect', ['/'])[0]
 
         try:
+            # Attempt to authenticate the user.I
+            # If no exception is raised then the user is authenticated.
             ldap_instance.simple_bind_s('cn=%s,%s' % (user, ldap_base_dn), password)
             LOGGER.info("user %s successfully authenticated" % user)
+
             status = '303 See Other'
-
             uri = '%s%s' % (server_host_url(environ), redirect)
+            cookie = self._make_cookie(environ, user)
 
-            secret = environ['tiddlyweb.config']['secret']
-            cookie_age = environ['tiddlyweb.config'].get('cookie_age', None)
-            cookie = make_cookie('tiddlyweb_user', user, mac_key=secret, path=self._cookie_path(environ),
-                                 expires=cookie_age)
-
+            # Redirect the user to the target URI now that they are authenticated.
             start_response(status, [('Content-Type', 'text/plain'), ('Set-Cookie', cookie),
                                     ('Location', uri.encode('utf-8'))])
             return [uri]
@@ -61,6 +64,12 @@ class Challenger(ChallengerInterface):
                                          error_message=
                                          'Unable to reach authorization provider, please contact your administrator',
                                          redirect=redirect)
+
+    def _make_cookie(self, environ, user):
+        secret = environ['tiddlyweb.config']['secret']
+        cookie_age = environ['tiddlyweb.config'].get('cookie_age', None)
+        return make_cookie('tiddlyweb_user', user, mac_key=secret, path=self._cookie_path(environ),
+                           expires=cookie_age)
 
     def _send_login_form(self, start_response, status='401 Unauthorized', error_message='', redirect='/'):
         start_response(status, [('Content-Type', 'text/html; charset=UTF-8')])
