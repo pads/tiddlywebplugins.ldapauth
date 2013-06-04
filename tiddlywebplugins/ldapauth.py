@@ -25,8 +25,9 @@ class Challenger(ChallengerInterface):
         """
         Respond to a POST by processing data sent from a form.
         """
-        ldap_host = environ['tiddlyweb.config'].get('ldap_host', '127.0.0.1')
-        ldap_port = environ['tiddlyweb.config'].get('ldap_port', '389')
+        ldap_config = environ['tiddlyweb.config'].get('ldapauth', {})
+        ldap_host = ldap_config.get('ldap_host', '127.0.0.1')
+        ldap_port = ldap_config.get('ldap_port', '389')
         ldap_instance = ldap.initialize('ldap://%s:%s' % (ldap_host, ldap_port))
 
         query = environ['tiddlyweb.query']

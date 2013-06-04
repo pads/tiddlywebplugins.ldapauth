@@ -108,9 +108,10 @@ def test_post_invalid_user_credentials_preserves_redirect_in_form():
 
 def test_post_can_use_custom_ldap_config():
     from tiddlyweb.config import config
-
-    config['ldap_host'] = '1.2.3.4'
-    config['ldap_port'] = '56789'
+    config['ldapauth'] = {
+        'ldap_host': '1.2.3.4',
+        'ldap_port': '56789'
+    }
 
     mock_ldap, mock_initialize = _mock_bad_ldap_bind()
 
