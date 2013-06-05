@@ -187,6 +187,38 @@ def test_configured_base_dn_is_used_as_part_of_login():
     assert raised
 
 
+def test_when_tiddlyspace_mode_configured_get_returns_form_with_csrf_token():
+    from tiddlyweb.config import config
+    config['ldapauth'] = {
+        'ldap_tiddlyspace_mode': True
+    }
+    http = httplib2.Http()
+    response, content = http.request('http://our_test_domain:8001/challenge/tiddlywebplugins.ldapauth', method='GET')
+
+    assert response['content-type'] == 'text/html; charset=UTF-8'
+    _assert_csrf_form(content)
+
+
+def test_when_tiddlyspace_mode_configured_auth_failure_returns_form_with_csrf_token():
+    mock_ldap, mock_initialize = _mock_bad_ldap_bind()
+
+    response, content = _send_bad_login()
+
+    mock_ldap.initialize.assert_called_once_with('ldap://127.0.0.1:389')
+    mock_initialize.simple_bind_s.assert_called_once_with('cn=imposter,dc=localhost', 'letmein')
+
+
+def test_when_tiddlyspace_mode_configured_no_ldap_connection_returns_form_with_csrf_token():
+    mock_ldap, mock_initialize = _mock_bad_ldap_bind(exception=ldap.SERVER_DOWN({'desc': "Can't contact LDAP server"}))
+
+    response, content = _send_good_login()
+
+    mock_ldap.initialize.assert_called_once()
+    mock_initialize.simple_bind_s.assert_called_once_with('cn=pads,dc=localhost', 'letmein')
+
+    _assert_csrf_form(content, 'Unable to reach authorization provider, please contact your administrator')
+
+
 def _assert_form(content, error_message='', redirect='/'):
     assert content == """
 <p>%s</p>
@@ -202,7 +234,36 @@ def _assert_form(content, error_message='', redirect='/'):
     <input type="hidden" name="tiddlyweb_redirect" value="%s" />
     <input type="submit" value="submit" />
 </form>
-        """ % (error_message, redirect)
+""" % (error_message, redirect)
+
+
+def _assert_csrf_form(content, error_message='', redirect='/'):
+    assert content == """
+<p>%s</p>
+<form action="" method="POST">
+    <label>
+        User:
+        <input name="user" />
+    </label>
+    <label>
+        Password:
+        <input type="password" name="password" />
+    </label>
+    <input type="hidden" name="tiddlyweb_redirect" value="%s" />
+    <input type="hidden" id="csrf_token" name="csrf_token" />
+    <input type="submit" value="submit" />
+</form>
+<script type="text/javascript" src="/bags/tiddlyspace/tiddlers/TiddlySpaceCSRF"></script>
+<script type="text/javascript">
+    var csrfToken = window.getCSRFToken(),
+        el = null;
+
+    if (csrfToken) {
+        el = document.getElementById('csrf_token');
+        el.value = csrfToken;
+    }
+</script>
+""" % (error_message, redirect)
 
 
 def _mock_good_ldap_bind():

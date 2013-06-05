@@ -69,9 +69,12 @@ Configure an LDAP server to communicate with.  If this is not specified then `12
         'ldap_host': 'my.ldapserver.com',
         'ldap_port': '3890',
         'ldap_base_dn': 'dc=my,dc=domain'
+        'ldap_tiddlyspace_mode': True
     }
 
 If `ldap_base_dn` is not specified then `dc=localhost` is assumed.
+
+`'ldap_tiddlyspace_mode': True` is only needed for TiddlySpace installations where a CSRF token is required.
 
 Usage
 =====

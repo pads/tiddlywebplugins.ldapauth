@@ -6,6 +6,39 @@ from tiddlyweb.web.util import make_cookie, server_host_url
 
 LOGGER = logging.getLogger(__name__)
 
+FORM = """
+<p>%s</p>
+<form action="" method="POST">
+    <label>
+        User:
+        <input name="user" />
+    </label>
+    <label>
+        Password:
+        <input type="password" name="password" />
+    </label>
+    <input type="hidden" name="tiddlyweb_redirect" value="%s" />%s
+"""
+
+TW_FORM_END = """
+    <input type="submit" value="submit" />
+</form>"""
+
+TS_FORM_END = """
+    <input type="hidden" id="csrf_token" name="csrf_token" />
+    <input type="submit" value="submit" />
+</form>
+<script type="text/javascript" src="/bags/tiddlyspace/tiddlers/TiddlySpaceCSRF"></script>
+<script type="text/javascript">
+    var csrfToken = window.getCSRFToken(),
+        el = null;
+
+    if (csrfToken) {
+        el = document.getElementById('csrf_token');
+        el.value = csrfToken;
+    }
+</script>"""
+
 
 class Challenger(ChallengerInterface):
     """
@@ -18,8 +51,10 @@ class Challenger(ChallengerInterface):
         """
         Respond to a GET request by sending a form for the user to supply a username and password.
         """
+        tiddlyspace_mode = environ['tiddlyweb.config'].get('ldapauth', {}).get('ldap_tiddlyspace_mode', False)
+
         redirect = (environ['tiddlyweb.query'].get('tiddlyweb_redirect', ['/'])[0])
-        return self._send_login_form(start_response, redirect=redirect)
+        return self._send_login_form(start_response, redirect=redirect, tiddlyspace_mode=tiddlyspace_mode)
 
     def challenge_post(self, environ, start_response):
         """
@@ -33,6 +68,7 @@ class Challenger(ChallengerInterface):
         ldap_port = ldap_config.get('ldap_port', '389')
         ldap_base_dn = ldap_config.get('ldap_base_dn', 'dc=localhost')
         ldap_instance = ldap.initialize('ldap://%s:%s' % (ldap_host, ldap_port))
+        tiddlyspace_mode = ldap_config.get('ldap_tiddlyspace_mode', False)
 
         # Get the required data from the posted form
         query = environ['tiddlyweb.query']
@@ -57,13 +93,13 @@ class Challenger(ChallengerInterface):
         except ldap.INVALID_CREDENTIALS:
             LOGGER.warn("user %s failed authentication" % user)
             return self._send_login_form(start_response, error_message='Invalid user credentials, please try again',
-                                         redirect=redirect)
+                                         redirect=redirect, tiddlyspace_mode=tiddlyspace_mode)
         except ldap.SERVER_DOWN:
             LOGGER.error("could not establish connection with LDAP server")
             return self._send_login_form(start_response, '504 Gateway Timeout',
                                          error_message=
                                          'Unable to reach authorization provider, please contact your administrator',
-                                         redirect=redirect)
+                                         redirect=redirect, tiddlyspace_mode=tiddlyspace_mode)
 
     def _make_cookie(self, environ, user):
         secret = environ['tiddlyweb.config']['secret']
@@ -71,20 +107,10 @@ class Challenger(ChallengerInterface):
         return make_cookie('tiddlyweb_user', user, mac_key=secret, path=self._cookie_path(environ),
                            expires=cookie_age)
 
-    def _send_login_form(self, start_response, status='401 Unauthorized', error_message='', redirect='/'):
+    def _send_login_form(self, start_response, status='401 Unauthorized', error_message='', redirect='/',
+                         tiddlyspace_mode=False):
         start_response(status, [('Content-Type', 'text/html; charset=UTF-8')])
-        return ["""
-<p>%s</p>
-<form action="" method="POST">
-    <label>
-        User:
-        <input name="user" />
-    </label>
-    <label>
-        Password:
-        <input type="password" name="password" />
-    </label>
-    <input type="hidden" name="tiddlyweb_redirect" value="%s" />
-    <input type="submit" value="submit" />
-</form>
-        """ % (error_message, redirect)]
+        if tiddlyspace_mode:
+            return [FORM % (error_message, redirect, TS_FORM_END)]
+        else:
+            return [FORM % (error_message, redirect, TW_FORM_END)]
