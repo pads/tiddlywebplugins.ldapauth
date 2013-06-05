@@ -41,6 +41,21 @@ Setting up LDAP
 
 See [this guide](http://pads.tiddlyspace.com/OpenLDAP%20Setup).
 
+Plugin Installation
+===================
+
+Requires the following OS packages:
+
+    apt-get install libldap2-dev libsasl2-dev
+
+On Redhat-based systems this is:
+
+    yum install openldap-devel
+
+Then install tiddlywebplugins.ldapauth:
+
+    pip install -U tiddlywebplugins.ldapauth
+
 TiddlyWeb Configuration
 =======================
 
