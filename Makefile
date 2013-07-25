@@ -21,6 +21,9 @@ pep8:
 install:
 	python setup.py install
 
+install_dev:
+	pip install -e .[testing,coverage,style]
+
 dist:
 	python setup.py sdist
 

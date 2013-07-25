@@ -29,10 +29,11 @@ Plugin code lives in the `tiddlywebplugins` directory.
 
 Tests live in the `test` directory.
 
+* `make install` installs the plugin as a package on your system
+* `make install_dev` installs packages necessary to run tests, check style and provide test coverage
 * `make test` runs the tests.
 * `make test_with_coverage` runs the tests with code coverage reporting from `pytest-cov`
 * `make pep8` runs pep8 over the code to check for style compliance.
-* `make install` installs the plugin as a package on your system
 (you may need sudo for this.)
 * `make release` packages and uploads the plugin to [PyPI](http://pypi.python.org/pypi) for distribution.
 

@@ -2,8 +2,7 @@ language: python
 python:
   - "2.7"
 before_install: "sudo apt-get install libldap2-dev libsasl2-dev"
-install: "make install"
-before_script: "pip install -U pytest pytest-cov python-coveralls mock pep8 httplib2 wsgi_intercept"
+install: "make install_dev install"
 script: "make pep8 test_with_coverage"
 after_success:
   - "coveralls"
